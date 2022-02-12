@@ -2,13 +2,19 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 
 	"blog/app/handler"
 	"blog/app/model"
+	"blog/app/schema"
 
+	"github.com/go-playground/locales/en"
+	ut "github.com/go-playground/universal-translator"
+
+	"github.com/go-playground/validator"
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -19,18 +25,35 @@ import (
 
 // results count per page
 var limit int64 = 10
+var validate *validator.Validate
+var uni *ut.UniversalTranslator
 
 // CreatePerson will handle the create person post request
 func CreatePerson(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
-	person := new(model.Person)
+	en := en.New()
+	uni = ut.New(en, en)
+	trans, _ := uni.GetTranslator("en")
+	validate := validator.New()
+	person := new(schema.Person)
 	err := json.NewDecoder(req.Body).Decode(person)
+	err = validate.Struct(person)
 	if err != nil {
-		handler.ResponseWriter(res, http.StatusBadRequest, "body json request have issues!!!", nil)
+		if _, ok := err.(*validator.InvalidValidationError); ok {
+			errs := err.(validator.ValidationErrors)
+			fmt.Println(errs.Translate(trans))
+			//fmt.Println("\n%+v\n", err)
+			return
+		}
+	}
+	if err != nil {
+		handler.ResponseWriter(res, http.StatusBadRequest, "body json request have issues!!!", err.Error())
 		return
 	}
 	result, err := db.Collection("people").InsertOne(nil, person)
 	if err != nil {
 		switch err.(type) {
+		//case validator.ValidationErrors:
+		//	handler.ResponseWriter(res, http.StatusNotAcceptable, "Missing Hai Bhai.", nil)
 		case mongo.WriteException:
 			handler.ResponseWriter(res, http.StatusNotAcceptable, "username or email already exists in database.", nil)
 		default:
@@ -44,7 +67,7 @@ func CreatePerson(db *mongo.Database, res http.ResponseWriter, req *http.Request
 
 // GetPersons will handle people list get request
 func GetPersons(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
-	var personList []model.Person
+	var personList []schema.Person
 	pageString := req.FormValue("page")
 	page, err := strconv.ParseInt(pageString, 10, 64)
 	if err != nil {
@@ -81,8 +104,8 @@ func GetPerson(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 		handler.ResponseWriter(res, http.StatusBadRequest, "id that you sent is wrong!!!", nil)
 		return
 	}
-	var person model.Person
-	err = db.Collection("people").FindOne(nil, model.Person{ID: id}).Decode(&person)
+	var person schema.Person
+	err = db.Collection("people").FindOne(nil, schema.Person{ID: id}).Decode(&person)
 	if err != nil {
 		switch err {
 		case mongo.ErrNoDocuments:

@@ -9,8 +9,8 @@ func (app *App) setRouters() {
 	app.Get("/person", app.handleRequest(GetPersons))
 
 	app.Post("/blogpage", app.handleRequest(CreateBlog))
-	//app.Patch("/blogpage/{id}", app.handleRequest(UpdateBlog))
-	//app.Put("/blogpage/{id}", app.handleRequest(UpdateBlog))
+	app.Patch("/blogpage/{id}", app.handleRequest(UpdateBlog))
+	app.Put("/blogpage/{id}", app.handleRequest(UpdateBlog))
 	app.Get("/blogpage/{id}", app.handleRequest(GetBlog))
 	app.Get("/blogpage", app.handleRequest(GetBlogs))
 }
