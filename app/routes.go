@@ -13,4 +13,10 @@ func (app *App) setRouters() {
 	app.Put("/blogpage/{id}", app.handleRequest(UpdateBlog))
 	app.Get("/blogpage/{id}", app.handleRequest(GetBlog))
 	app.Get("/blogpage", app.handleRequest(GetBlogs))
+
+	app.Post("/comment", app.handleRequest(CreateComment))
+	//app.Patch("/comment/{id}", app.handleRequest(UpdateComment))
+	//app.Put("/comment/{id}", app.handleRequest(UpdateComment))
+	app.Get("/comment/{id}", app.handleRequest(GetComment))
+	app.Get("/comment", app.handleRequest(GetComments))
 }

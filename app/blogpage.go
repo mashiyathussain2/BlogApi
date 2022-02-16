@@ -2,19 +2,21 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
 	//"strconv"
 
 	"blog/app/handler"
-	"blog/app/model"
+	"blog/app/schema"
+
+	//"blog/app/schema"
 
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/net/context"
 )
 
@@ -23,7 +25,7 @@ import (
 
 // CreatePerson will handle the create person post request
 func CreateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
-	blogpage := new(model.Blog)
+	blogpage := new(schema.Blog)
 	err := json.NewDecoder(req.Body).Decode(blogpage)
 	if err != nil {
 		handler.ResponseWriter(res, http.StatusBadRequest, "body json request have issues!!!", nil)
@@ -40,65 +42,115 @@ func CreateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 		return
 	}
 	blogpage.ID = result.InsertedID.(primitive.ObjectID)
-	blogpage.Author_Id = result.InsertedID.(primitive.ObjectID)
+	//blogpage.Author_Id = result.InsertedID.(primitive.ObjectID)
 	handler.ResponseWriter(res, http.StatusCreated, "", blogpage)
 }
 
 // GetBlogs is for getting all blogs
 func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
-	var blogs []*model.Blog
-	cur, err := db.Collection("blogpage").Find(context.TODO(), bson.M{}, options.Find())
-	if err != nil {
-		log.Fatal(err)
-	}
-	for cur.Next(context.TODO()) {
-		var elem model.Blog
-		err := cur.Decode(&elem)
-		if err != nil {
-			log.Fatal(err)
-		}
-		blogs = append(blogs, &elem)
-	}
-	if err := cur.Err(); err != nil {
-		log.Fatal(err)
-	}
-	cur.Close(context.TODO())
-
-	// trying to lookup
-	//lookupStage := bson.M{{"$lookup", bson.M{{"from", "podcasts"}, {"localField", "podcast"}, {"foreignField", "_id"}, {"as", "podcast"}}}}
 
 	lookupStage := bson.D{
 		{
 			Key: "$lookup",
 			Value: bson.M{
-				"from":         "person",
+				"from":         "comment",
 				"localField":   "_id",
-				"foreignField": "author_id",
-				"as":           "author_info",
+				"foreignField": "post_id",
+				"as":           "comment",
 			},
 		},
 	}
-	showLoadedCursor, eerr := db.Collection("blogpage").Aggregate(context.TODO(), mongo.Pipeline{lookupStage})
 
-	if eerr != nil {
-		log.Fatal(eerr)
+	lookupStage2 := bson.D{
+		{
+			Key: "$lookup",
+			Value: bson.M{
+				"from":         "people",
+				"localField":   "user_id",
+				"foreignField": "_id",
+				"as":           "person_info",
+			},
+		},
+	}
+
+	unwindStage := bson.D{
+		{
+			Key: "$unwind",
+			Value: bson.M{
+				"path": "$comment",
+			},
+		},
+	}
+
+	lookupStagesPeople := bson.D{
+		{
+			Key: "$lookup",
+			Value: bson.M{
+				"from":         "people",
+				"localField":   "comment.user_id",
+				"foreignField": "_id",
+				"as":           "comment.author_info",
+			},
+		},
+	}
+
+	unwindStageCommentAuthor := bson.D{
+		{
+			Key: "$unwind",
+			Value: bson.M{
+				"path": "$comment.author_info",
+			},
+		},
+	}
+	groupStage := bson.D{
+		{
+			Key: "$group",
+			Value: bson.M{
+				"_id": "$_id",
+				"description": bson.M{
+					"$first": "$description",
+				},
+				"comment": bson.M{
+					"$push": "$comment",
+				},
+			},
+		},
+	}
+
+	pipeline := mongo.Pipeline{lookupStage, lookupStage2, unwindStage, lookupStagesPeople, unwindStageCommentAuthor, groupStage}
+
+	showLoadedCursor, err := db.Collection("blogpage").Aggregate(context.TODO(), pipeline)
+	if err != nil {
+		fmt.Println("1", err)
+		return
 	}
 	var showsLoaded []bson.M
-	if eerr = showLoadedCursor.All(context.TODO(), &showsLoaded); err != nil {
-		log.Fatal(eerr)
+	if err = showLoadedCursor.All(context.TODO(), &showsLoaded); err != nil {
+		fmt.Println("2", err)
 	}
-	//_, eerr := db.Collection("people").Aggregate(context.TODO(),bson.M{
-	//	"$lookup" : bson.M{
-	//		"from" : "person",
-	//		"localField" : "_id",
-	//		"foreignField" : "author_id",
-	//		"as" : "author_info",
-	//	}});
-	//if eerr != nil {
-	//	log.Fatal(eerr)
-	//}
 
-	handler.ResponseWriter(res, http.StatusOK, "", blogs)
+	count, err := db.Collection("blogpage").CountDocuments(context.TODO(), bson.M{})
+	fmt.Println(count, err)
+
+	fmt.Println("RESP: ", showsLoaded)
+	handler.ResponseWriter(res, http.StatusOK, "", showsLoaded)
+
+	//cur, err := db.Collection("blogpage").Find(nil, &showsLoaded, options.Find())
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//for showLoadedCursor.Next(context.TODO()) {
+	//	var elem schema.Blog
+	//	err := showLoadedCursor.Decode(&elem)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//	blogs = append(blogs, &elem)
+	//}
+	//if err := showLoadedCursor.Err(); err != nil {
+	//	log.Fatal(err)
+	//}
+	//handler.ResponseWriter(res, http.StatusOK, "", showsLoaded)
 	//respondJSON(res, http.StatusOK, blogs)
 }
 
@@ -110,8 +162,8 @@ func GetBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 		handler.ResponseWriter(res, http.StatusBadRequest, "id that you sent is wrong!!!", nil)
 		return
 	}
-	var blog model.Blog
-	err = db.Collection("people").FindOne(nil, model.Blog{ID: id}).Decode(&blog)
+	var blog schema.Blog
+	err = db.Collection("people").FindOne(nil, schema.Blog{ID: id}).Decode(&blog)
 	if err != nil {
 		switch err {
 		case mongo.ErrNoDocuments:
@@ -143,7 +195,7 @@ func UpdateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 	update := bson.M{
 		"$set": updateData,
 	}
-	result, err := db.Collection("people").UpdateOne(context.Background(), model.Blog{ID: oid}, update)
+	result, err := db.Collection("people").UpdateOne(context.Background(), schema.Blog{ID: oid}, update)
 	if err != nil {
 		log.Printf("Error while updateing document: %v", err)
 		handler.ResponseWriter(res, http.StatusInternalServerError, "error in updating document!!!", nil)

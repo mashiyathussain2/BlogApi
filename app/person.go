@@ -1,6 +1,7 @@
 package app
 
 import (
+	//"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -8,11 +9,15 @@ import (
 	"strconv"
 
 	"blog/app/handler"
-	"blog/app/model"
 	"blog/app/schema"
 
 	"github.com/go-playground/locales/en"
 	ut "github.com/go-playground/universal-translator"
+
+	//uniquevalidator "github.com/ramadani/go-unique-validator"
+
+	//uniquevalidator "github.com/ramadani/go-unique-validator"
+	//"github.com/thedevsaddam/govalidator"
 
 	"github.com/go-playground/validator"
 	"github.com/gorilla/mux"
@@ -27,6 +32,8 @@ import (
 var limit int64 = 10
 var validate *validator.Validate
 var uni *ut.UniversalTranslator
+
+//var coll *mongo.Collection
 
 // CreatePerson will handle the create person post request
 func CreatePerson(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
@@ -45,24 +52,55 @@ func CreatePerson(db *mongo.Database, res http.ResponseWriter, req *http.Request
 			return
 		}
 	}
+
+	//var coll *mongo.Collection
+	//var id primitive.ObjectID
+
+	// find the document for which the _id field matches id
+	// specify the Sort option to sort the documents by age
+	// the first document in the sorted order will be returned
+	//opts := options.FindOne().SetSort(bson.D{{"_id", 1}})
+	//var results bson.M
+	//var person schema.Person
+	err = db.Collection("people").FindOne(nil, schema.Person{Email: person.Email}).Decode(&person)
+	if err != nil {
+		result, err := db.Collection("people").InsertOne(context.Background(), person)
+		if err != nil {
+			switch err.(type) {
+			case mongo.WriteException:
+				handler.ResponseWriter(res, http.StatusNotAcceptable, "username or email already exists in database.", nil)
+			default:
+				handler.ResponseWriter(res, http.StatusInternalServerError, "Error while inserting data.", nil)
+			}
+			return
+		}
+		person.ID = result.InsertedID.(primitive.ObjectID)
+		//person.Person_Id = result.InsertedID.(primitive.ObjectID)
+		handler.ResponseWriter(res, http.StatusCreated, "", person)
+	}
+	handler.ResponseWriter(res, http.StatusNotAcceptable, "username or email already exists in database.", nil)
+
+	//fmt.Printf("found document %v", person)
+
 	if err != nil {
 		handler.ResponseWriter(res, http.StatusBadRequest, "body json request have issues!!!", err.Error())
 		return
 	}
-	result, err := db.Collection("people").InsertOne(nil, person)
-	if err != nil {
-		switch err.(type) {
-		//case validator.ValidationErrors:
-		//	handler.ResponseWriter(res, http.StatusNotAcceptable, "Missing Hai Bhai.", nil)
-		case mongo.WriteException:
-			handler.ResponseWriter(res, http.StatusNotAcceptable, "username or email already exists in database.", nil)
-		default:
-			handler.ResponseWriter(res, http.StatusInternalServerError, "Error while inserting data.", nil)
-		}
-		return
-	}
-	person.ID = result.InsertedID.(primitive.ObjectID)
-	handler.ResponseWriter(res, http.StatusCreated, "", person)
+	//var e mongo.WriteException
+	//if err != nil {
+	//	for _, we := range e.WriteErrors {
+	//		if we.Code == 11000 {
+	//			handler.ResponseWriter(res, http.StatusNotAcceptable, "username or email already exists in database.", err.Error())
+	//		}
+	//	}
+	//}
+	//uniqueRule := uniquevalidator.NewUniqueRule(db, "unique")
+	//govalidator.AddCustomRule("unique", uniqueRule.Rule)
+	//err := db.Collection.ensureIndex( "email", unique )
+	//result, err := db.Collection("people").InsertOne(req.Context(), person)
+	//err := db.Collection.createIndex( email: 1 , unique: true )
+	//err = db.collection.createIndex( { "email": 1 }, { unique: true } )
+
 }
 
 // GetPersons will handle people list get request
@@ -81,6 +119,7 @@ func GetPersons(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 			"_id": -1, // -1 for descending and 1 for ascending
 		},
 	}
+
 	curser, err := db.Collection("people").Find(nil, bson.M{}, &findOptions)
 	if err != nil {
 		log.Printf("Error while quering collection: %v\n", err)
@@ -137,7 +176,7 @@ func UpdatePerson(db *mongo.Database, res http.ResponseWriter, req *http.Request
 	update := bson.M{
 		"$set": updateData,
 	}
-	result, err := db.Collection("people").UpdateOne(context.Background(), model.Person{ID: oid}, update)
+	result, err := db.Collection("people").UpdateOne(context.Background(), schema.Person{ID: oid}, update)
 	if err != nil {
 		log.Printf("Error while updateing document: %v", err)
 		handler.ResponseWriter(res, http.StatusInternalServerError, "error in updating document!!!", nil)
