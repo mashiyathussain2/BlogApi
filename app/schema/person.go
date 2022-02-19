@@ -14,13 +14,8 @@ type Person struct {
 	//Person_Id primitive.ObjectID `json: "person_id,omitempty" bson:"person_id,omitempty"`
 	LastName string `json:"last_name,omitempty" bson:"last_name,omitempty" validate:"required"`
 	Email    string `json:"email,omitempty" bson:"email,omitempty" validate: "required,email"`
-	//Blog_ID
-	//Comment_Info map[string]Comment `json:"comment_info" bson:"comment_info"`
-	//Comment_Info model.Comment      `json:"comment_info,omitempty" bson:"email,omitempty"`
-	//model.Comment
-	//FirstName string                 `json:"first_name,omitempty" bson:"first_name,omitempty"`
-	//LastName  string                 `json:"last_name,omitempty" bson:"last_name,omitempty"`
+	Password string `json:"password,omitempty" bson:"password,omitmepty" validate:"required"`
 	Username string `json:"username,omitempty" bson:"username,omitempty"`
-	//Email     string                 `json:"email,omitempty" bson:"email,omitempty"`
+	//LoginPassword Login                  `json:"password,omitempty" bson:"password,omitempty"`
 	Data map[string]interface{} `json:"data,omitempty" bson:"data,omitempty"` // data is a optional fields that can hold anything in key:value format.
 }

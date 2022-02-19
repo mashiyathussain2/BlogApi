@@ -19,4 +19,7 @@ func (app *App) setRouters() {
 	//app.Put("/comment/{id}", app.handleRequest(UpdateComment))
 	app.Get("/comment/{id}", app.handleRequest(GetComment))
 	app.Get("/comment", app.handleRequest(GetComments))
+
+	app.Post("/login", app.handleRequest(Login))
+
 }

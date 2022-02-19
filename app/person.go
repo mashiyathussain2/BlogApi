@@ -1,11 +1,12 @@
 package app
 
 import (
-	//"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+
+	//	"os"
 	"strconv"
 
 	"blog/app/handler"
@@ -25,18 +26,40 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/net/context"
 )
 
-// results count per page
 var limit int64 = 10
 var validate *validator.Validate
 var uni *ut.UniversalTranslator
 
+//var SECRET_KEY string = os.Getenv("server_host")
+
 //var coll *mongo.Collection
+
+func HashPassword(password string) string {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	if err != nil {
+		log.Panic(err)
+	}
+	return string(bytes)
+}
+func VerifyPassword(userPassword string, providedPassword string) (bool, string) {
+	err := bcrypt.CompareHashAndPassword([]byte(providedPassword), []byte(userPassword))
+	check := true
+	msg := ""
+
+	if err != nil {
+		msg = fmt.Sprintf("passowrd is incorrect")
+		check = false
+	}
+	return check, msg
+}
 
 // CreatePerson will handle the create person post request
 func CreatePerson(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
+	//var user schema.Person
 	en := en.New()
 	uni = ut.New(en, en)
 	trans, _ := uni.GetTranslator("en")
@@ -53,12 +76,12 @@ func CreatePerson(db *mongo.Database, res http.ResponseWriter, req *http.Request
 		}
 	}
 
-	//var coll *mongo.Collection
-	//var id primitive.ObjectID
+	password := HashPassword(*&person.Password)
+	person.Password = password
 
-	// find the document for which the _id field matches id
-	// specify the Sort option to sort the documents by age
-	// the first document in the sorted order will be returned
+	//token, _ := helper.GenerateAllTokens(*&person.Email, *&person.FirstName, *&person.LastName)
+	//person.Token = token
+
 	//opts := options.FindOne().SetSort(bson.D{{"_id", 1}})
 	//var results bson.M
 	//var person schema.Person
