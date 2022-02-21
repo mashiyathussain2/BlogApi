@@ -6,19 +6,14 @@ import (
 	"log"
 	"net/http"
 
-	//	"os"
 	"strconv"
 
 	"blog/app/handler"
+	"blog/app/model"
 	"blog/app/schema"
 
 	"github.com/go-playground/locales/en"
 	ut "github.com/go-playground/universal-translator"
-
-	//uniquevalidator "github.com/ramadani/go-unique-validator"
-
-	//uniquevalidator "github.com/ramadani/go-unique-validator"
-	//"github.com/thedevsaddam/govalidator"
 
 	"github.com/go-playground/validator"
 	"github.com/gorilla/mux"
@@ -34,10 +29,7 @@ var limit int64 = 10
 var validate *validator.Validate
 var uni *ut.UniversalTranslator
 
-//var SECRET_KEY string = os.Getenv("server_host")
-
-//var coll *mongo.Collection
-
+// bcrypt the password in hash format
 func HashPassword(password string) string {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	if err != nil {
@@ -45,6 +37,8 @@ func HashPassword(password string) string {
 	}
 	return string(bytes)
 }
+
+// verify the user passwords.
 func VerifyPassword(userPassword string, providedPassword string) (bool, string) {
 	err := bcrypt.CompareHashAndPassword([]byte(providedPassword), []byte(userPassword))
 	check := true
@@ -59,71 +53,41 @@ func VerifyPassword(userPassword string, providedPassword string) (bool, string)
 
 // CreatePerson will handle the create person post request
 func CreatePerson(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
-	//var user schema.Person
 	en := en.New()
 	uni = ut.New(en, en)
 	trans, _ := uni.GetTranslator("en")
 	validate := validator.New()
-	person := new(schema.Person)
+	person := new(model.Person)
 	err := json.NewDecoder(req.Body).Decode(person)
 	err = validate.Struct(person)
 	if err != nil {
 		if _, ok := err.(*validator.InvalidValidationError); ok {
 			errs := err.(validator.ValidationErrors)
 			fmt.Println(errs.Translate(trans))
-			//fmt.Println("\n%+v\n", err)
 			return
 		}
 	}
-
+	// convert the password in hash format.
 	password := HashPassword(*&person.Password)
 	person.Password = password
 
-	//token, _ := helper.GenerateAllTokens(*&person.Email, *&person.FirstName, *&person.LastName)
-	//person.Token = token
-
-	//opts := options.FindOne().SetSort(bson.D{{"_id", 1}})
-	//var results bson.M
-	//var person schema.Person
-	err = db.Collection("people").FindOne(nil, schema.Person{Email: person.Email}).Decode(&person)
+	// First find the user with their email in database if the user already created then return already exists.
+	err = db.Collection("people").FindOne(context.TODO(), model.Person{Email: person.Email}).Decode(&person)
 	if err != nil {
+		// if user not exists in the database then create a new user and insert that user in the database.
 		result, err := db.Collection("people").InsertOne(context.Background(), person)
 		if err != nil {
 			switch err.(type) {
 			case mongo.WriteException:
-				handler.ResponseWriter(res, http.StatusNotAcceptable, "username or email already exists in database.", nil)
+				handler.ResponseWriter(res, http.StatusNotAcceptable, "username or email already exists in database.", err.Error())
 			default:
 				handler.ResponseWriter(res, http.StatusInternalServerError, "Error while inserting data.", nil)
 			}
 			return
 		}
 		person.ID = result.InsertedID.(primitive.ObjectID)
-		//person.Person_Id = result.InsertedID.(primitive.ObjectID)
 		handler.ResponseWriter(res, http.StatusCreated, "", person)
 	}
-	handler.ResponseWriter(res, http.StatusNotAcceptable, "username or email already exists in database.", nil)
-
-	//fmt.Printf("found document %v", person)
-
-	if err != nil {
-		handler.ResponseWriter(res, http.StatusBadRequest, "body json request have issues!!!", err.Error())
-		return
-	}
-	//var e mongo.WriteException
-	//if err != nil {
-	//	for _, we := range e.WriteErrors {
-	//		if we.Code == 11000 {
-	//			handler.ResponseWriter(res, http.StatusNotAcceptable, "username or email already exists in database.", err.Error())
-	//		}
-	//	}
-	//}
-	//uniqueRule := uniquevalidator.NewUniqueRule(db, "unique")
-	//govalidator.AddCustomRule("unique", uniqueRule.Rule)
-	//err := db.Collection.ensureIndex( "email", unique )
-	//result, err := db.Collection("people").InsertOne(req.Context(), person)
-	//err := db.Collection.createIndex( email: 1 , unique: true )
-	//err = db.collection.createIndex( { "email": 1 }, { unique: true } )
-
 }
 
 // GetPersons will handle people list get request
@@ -142,7 +106,7 @@ func GetPersons(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 			"_id": -1, // -1 for descending and 1 for ascending
 		},
 	}
-
+	// query for find the user in the database
 	curser, err := db.Collection("people").Find(nil, bson.M{}, &findOptions)
 	if err != nil {
 		log.Printf("Error while quering collection: %v\n", err)
@@ -167,6 +131,7 @@ func GetPerson(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	var person schema.Person
+	// query for finding one user in the database.
 	err = db.Collection("people").FindOne(nil, schema.Person{ID: id}).Decode(&person)
 	if err != nil {
 		switch err {

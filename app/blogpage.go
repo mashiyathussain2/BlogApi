@@ -4,22 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 
-	//	"go/token"
 	"os"
 
-	//	"go/token"
 	"log"
 	"net/http"
-
-	//"strconv"
 
 	"blog/app/handler"
 	"blog/app/helpers"
 	"blog/app/schema"
 
-	//"blog/app/schema"
-
-	//	"github.com/dgrijalva/jwt-go"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
@@ -28,11 +21,9 @@ import (
 	"golang.org/x/net/context"
 )
 
-// results count per page
-//var limit int64 = 10
 var jwtKey string = os.Getenv("SECRET_KEY")
 
-// CreatePerson will handle the create person post request
+// CreateBlog will handle the create blog post request
 func CreateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 	blogpage := new(schema.Blog)
 	err := json.NewDecoder(req.Body).Decode(blogpage)
@@ -40,6 +31,7 @@ func CreateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 		handler.ResponseWriter(res, http.StatusBadRequest, "body json request have issues!!!", nil)
 		return
 	}
+	// for checking authorization
 	cookie, err := req.Cookie("token")
 	if err != nil {
 		if err == http.ErrNoCookie {
@@ -49,7 +41,7 @@ func CreateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 		handler.ResponseWriter(res, http.StatusUnauthorized, "Unauthorized", nil) //res.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
+	// tokenstr as the value of cookie
 	tokenStr := cookie.Value
 
 	claims := helpers.SignedDetails{}
@@ -87,7 +79,7 @@ func CreateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 
 // GetBlogs is for getting all blogs
 func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
-
+	// aggregation method starts from here.
 	lookupStage := bson.D{
 		{
 			Key: "$lookup",
@@ -157,7 +149,7 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 	}
 
 	pipeline := mongo.Pipeline{lookupStage, lookupStage2, unwindStage, lookupStagesPeople, unwindStageCommentAuthor, groupStage}
-
+	// query for the aggregation
 	showLoadedCursor, err := db.Collection("blogpage").Aggregate(context.TODO(), pipeline)
 	if err != nil {
 		fmt.Println("1", err)
@@ -174,26 +166,9 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 	fmt.Println("RESP: ", showsLoaded)
 	handler.ResponseWriter(res, http.StatusOK, "", showsLoaded)
 
-	//cur, err := db.Collection("blogpage").Find(nil, &showsLoaded, options.Find())
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//for showLoadedCursor.Next(context.TODO()) {
-	//	var elem schema.Blog
-	//	err := showLoadedCursor.Decode(&elem)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//	blogs = append(blogs, &elem)
-	//}
-	//if err := showLoadedCursor.Err(); err != nil {
-	//	log.Fatal(err)
-	//}
-	//handler.ResponseWriter(res, http.StatusOK, "", showsLoaded)
-	//respondJSON(res, http.StatusOK, blogs)
 }
 
-// GetPerson will give us person with special id
+// GetBlog will give us blog with special id
 func GetBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 	var params = mux.Vars(req)
 	id, err := primitive.ObjectIDFromHex(params["id"])
@@ -216,7 +191,7 @@ func GetBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 	handler.ResponseWriter(res, http.StatusOK, "", blog)
 }
 
-// UpdatePerson will handle the person update endpoint
+// UpdateBlog will handle the blog update endpoint
 func UpdateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 	var updateData map[string]interface{}
 	err := json.NewDecoder(req.Body).Decode(&updateData)
