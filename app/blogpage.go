@@ -3,16 +3,24 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+
+	//	"go/token"
+	"os"
+
+	//	"go/token"
 	"log"
 	"net/http"
 
 	//"strconv"
 
 	"blog/app/handler"
+	"blog/app/helpers"
 	"blog/app/schema"
 
 	//"blog/app/schema"
 
+	//	"github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -22,6 +30,7 @@ import (
 
 // results count per page
 //var limit int64 = 10
+var jwtKey string = os.Getenv("SECRET_KEY")
 
 // CreatePerson will handle the create person post request
 func CreateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
@@ -29,6 +38,37 @@ func CreateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 	err := json.NewDecoder(req.Body).Decode(blogpage)
 	if err != nil {
 		handler.ResponseWriter(res, http.StatusBadRequest, "body json request have issues!!!", nil)
+		return
+	}
+	cookie, err := req.Cookie("token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			handler.ResponseWriter(res, http.StatusUnauthorized, "Unauthorized", err.Error()) //res.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		handler.ResponseWriter(res, http.StatusUnauthorized, "Unauthorized", nil) //res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	tokenStr := cookie.Value
+
+	claims := helpers.SignedDetails{}
+
+	tkn, err := jwt.ParseWithClaims(tokenStr, &claims,
+		func(tkn *jwt.Token) (interface{}, error) {
+			return []byte(jwtKey), nil
+		})
+
+	if err != nil {
+		if err == jwt.ErrSignatureInvalid {
+			handler.ResponseWriter(res, http.StatusUnauthorized, "Unauthorized", nil) //res.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		handler.ResponseWriter(res, http.StatusBadRequest, "Bad Request", err.Error()) //res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if !tkn.Valid {
+		handler.ResponseWriter(res, http.StatusUnauthorized, "Unauthorized", nil) //res.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 	result, err := db.Collection("blogpage").InsertOne(nil, blogpage)
@@ -42,7 +82,6 @@ func CreateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 		return
 	}
 	blogpage.ID = result.InsertedID.(primitive.ObjectID)
-	//blogpage.Author_Id = result.InsertedID.(primitive.ObjectID)
 	handler.ResponseWriter(res, http.StatusCreated, "", blogpage)
 }
 
