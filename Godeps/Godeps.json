@@ -1,5 +1,5 @@
 {
-	"ImportPath": ".",
+	"ImportPath": "mashiyatblog",
 	"GoVersion": "go1.17",
 	"GodepVersion": "v80",
 	"Packages": [
