@@ -1,5 +1,5 @@
 {
-	"ImportPath": "blog",
+	"ImportPath": ".",
 	"GoVersion": "go1.17",
 	"GodepVersion": "v80",
 	"Packages": [
