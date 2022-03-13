@@ -1,1 +1,1 @@
-web:blog
+server:blog
