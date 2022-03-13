@@ -1,1 +1,1 @@
-“web: main.go"
+“server: main.go"
