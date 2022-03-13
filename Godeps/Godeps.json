@@ -5,8 +5,5 @@
 	"Packages": [
 		"./..."
 	],
-	"Deps": [],
-	"server": "go run main.go"
+	"Deps": []
 }
-
-
