@@ -1,2 +1,1 @@
-“web: bin/blog”
-
+“web: blog"
