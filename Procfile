@@ -1,1 +1,1 @@
-server:blog
+server:go run main.go
