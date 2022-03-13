@@ -1,1 +1,1 @@
-web:blog
+web:go run main.go
