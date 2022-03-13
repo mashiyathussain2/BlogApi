@@ -1,1 +1,1 @@
-“web: blog go run main.go"
+“web: bin/go run main.go"
