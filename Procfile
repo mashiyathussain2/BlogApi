@@ -1,1 +1,1 @@
-web: go run main.go
+web: PATH=$PATH:$HOME/bin web -listen=:$PORT
