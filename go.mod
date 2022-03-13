@@ -1,3 +1,4 @@
+// +heroku goVersion go1.12
 module blog
 
 go 1.17

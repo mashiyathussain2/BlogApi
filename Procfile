@@ -1,1 +1,1 @@
-web:bloghtp
+web:blog
