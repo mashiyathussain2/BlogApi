@@ -1,6 +1,6 @@
-// +heroku goVersion go1.12
 module blog
 
+// +heroku goVersion go1.15
 go 1.17
 
 require (
