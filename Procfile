@@ -1,1 +1,1 @@
-web:blog
+web:mashiyatblog
