@@ -162,22 +162,26 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 
 	pipeline := mongo.Pipeline{lookupStage, lookupStage2, unwindStage, lookupStagesPeople, unwindStageCommentAuthor, groupStage, likeLookup}
 	// query for the aggregation
+
 	showLoadedCursor, err := db.Collection("blogpage").Aggregate(context.Background(), pipeline)
+
 	if err != nil {
-		fmt.Println("1", err)
-		return
+		fmt.Println("Hello")
+
 	}
-	showsLoaded := new([]schema.Blog)
+	var showsLoaded []bson.M
+	//showsLoaded := new([]schema.Blog)
 
 	if err = showLoadedCursor.All(context.TODO(), &showsLoaded); err != nil {
-		fmt.Println("2", err)
+		fmt.Println("Hellooo", err)
+		return
 	}
 
 	count, err := db.Collection("blogpage").CountDocuments(context.TODO(), bson.M{})
 	fmt.Println(count, err)
 
 	fmt.Println(showsLoaded)
-	handler.ResponseWriter(res, http.StatusOK, "", showsLoaded)
+	handler.ResponseWriter(res, http.StatusOK, "hello", showsLoaded)
 
 }
 

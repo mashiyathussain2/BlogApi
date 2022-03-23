@@ -72,22 +72,22 @@ func CreatePerson(db *mongo.Database, res http.ResponseWriter, req *http.Request
 	person.Password = password
 
 	// First find the user with their email in database if the user already created then return already exists.
-	err = db.Collection("people").FindOne(context.TODO(), model.Person{Email: person.Email}).Decode(&person)
+	err = db.Collection("people").FindOne(context.Background(), model.Person{Email: person.Email}).Decode(&person)
+	// if user not exists in the database then create a new user and insert that user in the database.
+	result, err := db.Collection("people").InsertOne(context.TODO(), person)
 	if err != nil {
-		// if user not exists in the database then create a new user and insert that user in the database.
-		result, err := db.Collection("people").InsertOne(context.Background(), person)
-		if err != nil {
-			switch err.(type) {
-			case mongo.WriteException:
-				handler.ResponseWriter(res, http.StatusNotAcceptable, "username or email already exists in database.", err.Error())
-			default:
-				handler.ResponseWriter(res, http.StatusInternalServerError, "Error while inserting data.", nil)
-			}
-			return
+		switch err.(type) {
+		case mongo.WriteException:
+			handler.ResponseWriter(res, http.StatusNotAcceptable, "Email already exists in database.", nil)
+		default:
+			handler.ResponseWriter(res, http.StatusInternalServerError, "Error while inserting data.", nil)
 		}
-		person.ID = result.InsertedID.(primitive.ObjectID)
-		handler.ResponseWriter(res, http.StatusCreated, "", person)
+		return
 	}
+	person.ID = result.InsertedID.(primitive.ObjectID)
+	handler.ResponseWriter(res, http.StatusCreated, "", person)
+
+	//handler.ResponseWriter(res, http.StatusNotAcceptable, "Email already exists in database.", nil)
 }
 
 // GetPersons will handle people list get request
@@ -132,7 +132,7 @@ func GetPerson(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 	}
 	var person schema.Person
 	// query for finding one user in the database.
-	err = db.Collection("people").FindOne(nil, schema.Person{ID: id}).Decode(&person)
+	err = db.Collection("people").FindOne(context.Background(), model.Person{ID: id}).Decode(&person)
 	if err != nil {
 		switch err {
 		case mongo.ErrNoDocuments:
