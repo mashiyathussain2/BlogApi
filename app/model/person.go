@@ -12,5 +12,6 @@ type Person struct {
 	Username string                 `json:"username,omitempty" bson:"username,omitempty"`
 	Email    string                 `json:"email,omitempty" bson:"email,omitempty" validate:"required,email"`
 	Password string                 `json:"password,omitempty" bson:"password,omitempty" validate:"required"`
+	Profile  string                 `json:"profile_img,omitempty" bson:"profile_img,omitempty"`
 	Data     map[string]interface{} `json:"data,omitempty" bson:"data,omitempty"` // data is a optional fields that can hold anything in key:value format.
 }

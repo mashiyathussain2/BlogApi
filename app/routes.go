@@ -15,7 +15,7 @@ func (app *App) setRouters() {
 	app.Patch("/blogpage/{id}", app.handleRequest(UpdateBlog))
 	app.Put("/blogpage/{id}", app.handleRequest(UpdateBlog))
 	app.Get("/blogpage/{id}", app.handleRequest(GetBlog))
-	app.Get("/blogpage", app.handleRequest(GetBlogs))
+	app.Get("/blogpages", app.handleRequest(GetBlogs))
 
 	// routes for the comment.
 	app.Post("/comment", app.handleRequest(CreateComment))
@@ -24,4 +24,8 @@ func (app *App) setRouters() {
 
 	// route for login.
 	app.Post("/login", app.handleRequest(Login))
+
+	app.Post("/like", app.handleRequest(CreateLike))
+	app.Get("/likes", app.handleRequest(GetLikes))
+	app.Delete("/like/dlt/{id}", app.handleRequest(DeleteLike))
 }

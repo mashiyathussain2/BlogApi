@@ -79,6 +79,7 @@ func CreateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 
 // GetBlogs is for getting all blogs
 func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
+	//var showsLoaded []schema.Blog
 	// aggregation method starts from here.
 	lookupStage := bson.D{
 		{
@@ -147,15 +148,27 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 			},
 		},
 	}
+	likeLookup := bson.D{
+		{
+			Key: "$lookup",
+			Value: bson.M{
+				"from":         "like",
+				"localField":   "_id",
+				"foreignField": "post_id",
+				"as":           "likes",
+			},
+		},
+	}
 
-	pipeline := mongo.Pipeline{lookupStage, lookupStage2, unwindStage, lookupStagesPeople, unwindStageCommentAuthor, groupStage}
+	pipeline := mongo.Pipeline{lookupStage, lookupStage2, unwindStage, lookupStagesPeople, unwindStageCommentAuthor, groupStage, likeLookup}
 	// query for the aggregation
-	showLoadedCursor, err := db.Collection("blogpage").Aggregate(context.TODO(), pipeline)
+	showLoadedCursor, err := db.Collection("blogpage").Aggregate(context.Background(), pipeline)
 	if err != nil {
 		fmt.Println("1", err)
 		return
 	}
-	var showsLoaded []bson.M
+	showsLoaded := new([]schema.Blog)
+
 	if err = showLoadedCursor.All(context.TODO(), &showsLoaded); err != nil {
 		fmt.Println("2", err)
 	}
@@ -163,7 +176,7 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 	count, err := db.Collection("blogpage").CountDocuments(context.TODO(), bson.M{})
 	fmt.Println(count, err)
 
-	fmt.Println("RESP: ", showsLoaded)
+	fmt.Println(showsLoaded)
 	handler.ResponseWriter(res, http.StatusOK, "", showsLoaded)
 
 }
@@ -177,11 +190,11 @@ func GetBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	var blog schema.Blog
-	err = db.Collection("people").FindOne(nil, schema.Blog{ID: id}).Decode(&blog)
+	err = db.Collection("blogpage").FindOne(nil, schema.Blog{ID: id}).Decode(&blog)
 	if err != nil {
 		switch err {
 		case mongo.ErrNoDocuments:
-			handler.ResponseWriter(res, http.StatusNotFound, "person not found", nil)
+			handler.ResponseWriter(res, http.StatusNotFound, "blog not found", err.Error())
 		default:
 			log.Printf("Error while decode to go struct:%v\n", err)
 			handler.ResponseWriter(res, http.StatusInternalServerError, "there is an error on server!!!", nil)
@@ -209,7 +222,7 @@ func UpdateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 	update := bson.M{
 		"$set": updateData,
 	}
-	result, err := db.Collection("people").UpdateOne(context.Background(), schema.Blog{ID: oid}, update)
+	result, err := db.Collection("blogpage").UpdateOne(context.Background(), schema.Blog{ID: oid}, update)
 	if err != nil {
 		log.Printf("Error while updateing document: %v", err)
 		handler.ResponseWriter(res, http.StatusInternalServerError, "error in updating document!!!", nil)
@@ -218,6 +231,6 @@ func UpdateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 	if result.MatchedCount == 1 {
 		handler.ResponseWriter(res, http.StatusAccepted, "", &updateData)
 	} else {
-		handler.ResponseWriter(res, http.StatusNotFound, "person not found", nil)
+		handler.ResponseWriter(res, http.StatusNotFound, "blog not found", nil)
 	}
 }

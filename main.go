@@ -12,4 +12,5 @@ func main() {
 
 	config := config.NewConfig()
 	app.ConfigAndRunApp(config)
+
 }

@@ -34,7 +34,7 @@ func Login(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 	// verify the user password
 	passwordIsValid, msg := VerifyPassword(user.Password, foundUser.Password)
 	if passwordIsValid != true {
-		handler.ResponseWriter(res, http.StatusInternalServerError, msg, passwordIsValid)
+		handler.ResponseWriter(res, http.StatusInternalServerError, msg, err)
 		return
 	}
 	// verify user email
@@ -59,5 +59,5 @@ func Login(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 			Value: token,
 		})
 	// return the token whenever success login.
-	handler.ResponseWriter(res, http.StatusOK, "Success Login", token)
+	handler.ResponseWriter(res, http.StatusOK, "Success Login", bson.M{"token": token, "user_id": foundUser.ID})
 }
