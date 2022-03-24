@@ -13,6 +13,6 @@ type Blog struct {
 	Author_info  Person                 `json:"author_info,omitempty" bson:"author_info,omitempty"`
 	Comment_Info *Comment               `json:"comment_info,omitempty" bson:"comment_info,omitempty"`
 	Username     string                 `json:"username,omitempty" bson:"username,omitempty"`
-	Email        string                 `json:"email,omitempty" bson:"email,omitempty"`
+	BlogImg      string                 `json:"blog_img,omitempty" bson:"blog_img,omitempty"`
 	Data         map[string]interface{} `json:"data,omitempty" bson:"data,omitempty"` // data is a optional fields that can hold anything in key:value format.
 }

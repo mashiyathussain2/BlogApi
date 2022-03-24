@@ -79,7 +79,6 @@ func CreateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 
 // GetBlogs is for getting all blogs
 func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
-	//var showsLoaded []schema.Blog
 	// aggregation method starts from here.
 	lookupStage := bson.D{
 		{
@@ -92,7 +91,14 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 			},
 		},
 	}
-
+	unwindStage := bson.D{
+		{
+			Key: "$unwind",
+			Value: bson.M{
+				"path": "$comment",
+			},
+		},
+	}
 	lookupStage2 := bson.D{
 		{
 			Key: "$lookup",
@@ -105,40 +111,43 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 		},
 	}
 
-	unwindStage := bson.D{
-		{
-			Key: "$unwind",
-			Value: bson.M{
-				"path": "$comment",
-			},
-		},
-	}
+	// unwindStage := bson.D{
+	// 	{
+	// 		Key: "$unwind",
+	// 		Value: bson.M{
+	// 			"path": "$comment",
+	// 		},
+	// 	},
+	// }
 
-	lookupStagesPeople := bson.D{
-		{
-			Key: "$lookup",
-			Value: bson.M{
-				"from":         "people",
-				"localField":   "comment.user_id",
-				"foreignField": "_id",
-				"as":           "comment.author_info",
-			},
-		},
-	}
+	// lookupStagesPeople := bson.D{
+	// 	{
+	// 		Key: "$lookup",
+	// 		Value: bson.M{
+	// 			"from":         "people",
+	// 			"localField":   "comment.user_id",
+	// 			"foreignField": "_id",
+	// 			"as":           "comment.author_info",
+	// 		},
+	// 	},
+	// }
 
-	unwindStageCommentAuthor := bson.D{
-		{
-			Key: "$unwind",
-			Value: bson.M{
-				"path": "$comment.author_info",
-			},
-		},
-	}
+	// unwindStageCommentAuthor := bson.D{
+	// 	{
+	// 		Key: "$unwind",
+	// 		Value: bson.M{
+	// 			"path": "$comment.author_info",
+	// 		},
+	// 	},
+	// }
 	groupStage := bson.D{
 		{
 			Key: "$group",
 			Value: bson.M{
 				"_id": "$_id",
+				"title": bson.M{
+					"$first": "$title",
+				},
 				"description": bson.M{
 					"$first": "$description",
 				},
@@ -155,32 +164,32 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 				"from":         "like",
 				"localField":   "_id",
 				"foreignField": "post_id",
-				"as":           "likes",
+				"as":           "blog likes",
 			},
 		},
 	}
 
-	pipeline := mongo.Pipeline{lookupStage, lookupStage2, unwindStage, lookupStagesPeople, unwindStageCommentAuthor, groupStage, likeLookup}
-	// query for the aggregation
+	pipeline := mongo.Pipeline{lookupStage, unwindStage, lookupStage2 /* unwindStage,, lookupStagesPeople*/ /*unwindStageCommentAuthor*/, groupStage, likeLookup}
 
-	showLoadedCursor, err := db.Collection("blogpage").Aggregate(context.Background(), pipeline)
-
+	// // query for the aggregation
+	// showLoadedCursor, err := db.Collection("blogpage").Aggregate(context.TODO(), pipeline)
+	showLoadedCursor, err := db.Collection("blogpage").Aggregate(context.TODO(), pipeline)
 	if err != nil {
-		fmt.Println("Hello")
+		fmt.Println("Hello", err)
 
 	}
-	var showsLoaded []bson.M
-	//showsLoaded := new([]schema.Blog)
+	var showsLoaded = []bson.M{}
+	//showsLoaded := new(schema.Blog)
 
 	if err = showLoadedCursor.All(context.TODO(), &showsLoaded); err != nil {
-		fmt.Println("Hellooo", err)
-		return
+		fmt.Println("Hellooo")
+
 	}
 
-	count, err := db.Collection("blogpage").CountDocuments(context.TODO(), bson.M{})
-	fmt.Println(count, err)
+	// count, err := db.Collection("blogpage").CountDocuments(context.TODO(), bson.M{})
+	// fmt.Println(count, err)
 
-	fmt.Println(showsLoaded)
+	//fmt.Println(showsLoaded)
 	handler.ResponseWriter(res, http.StatusOK, "hello", showsLoaded)
 
 }
