@@ -151,6 +151,9 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 				"description": bson.M{
 					"$first": "$description",
 				},
+				"blog_img": bson.M{
+					"$first": "$blog_img",
+				},
 				"comment": bson.M{
 					"$push": "$comment",
 				},
@@ -164,7 +167,7 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 				"from":         "like",
 				"localField":   "_id",
 				"foreignField": "post_id",
-				"as":           "blog likes",
+				"as":           "blog_likes",
 			},
 		},
 	}
