@@ -91,14 +91,14 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 			},
 		},
 	}
-	unwindStage := bson.D{
-		{
-			Key: "$unwind",
-			Value: bson.M{
-				"path": "$comment",
-			},
-		},
-	}
+	// unwindStage := bson.D{
+	// 	{
+	// 		Key: "$unwind",
+	// 		Value: bson.M{
+	// 			"path": "$comment",
+	// 		},
+	// 	},
+	// }
 	lookupStage2 := bson.D{
 		{
 			Key: "$lookup",
@@ -155,7 +155,7 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 					"$first": "$blog_img",
 				},
 				"comment": bson.M{
-					"$push": "$comment",
+					"$first": "$comment",
 				},
 			},
 		},
@@ -172,7 +172,7 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 		},
 	}
 
-	pipeline := mongo.Pipeline{lookupStage, unwindStage, lookupStage2 /* unwindStage,, lookupStagesPeople*/ /*unwindStageCommentAuthor*/, groupStage, likeLookup}
+	pipeline := mongo.Pipeline{lookupStage /*unwindStage,*/, lookupStage2 /* unwindStage,, lookupStagesPeople*/ /*unwindStageCommentAuthor*/, groupStage, likeLookup}
 
 	// // query for the aggregation
 	// showLoadedCursor, err := db.Collection("blogpage").Aggregate(context.TODO(), pipeline)
@@ -188,11 +188,11 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 		fmt.Println("Hellooo")
 
 	}
-
 	// count, err := db.Collection("blogpage").CountDocuments(context.TODO(), bson.M{})
 	// fmt.Println(count, err)
-
+	//now := time.Now()
 	//fmt.Println(showsLoaded)
+
 	handler.ResponseWriter(res, http.StatusOK, "hello", showsLoaded)
 
 }
