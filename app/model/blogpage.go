@@ -1,8 +1,6 @@
 package model
 
 import (
-	"time"
-
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -16,6 +14,6 @@ type Blog struct {
 	Comment_Info *Comment               `json:"comment_info,omitempty" bson:"comment_info,omitempty"`
 	Username     string                 `json:"username,omitempty" bson:"username,omitempty"`
 	BlogImg      string                 `json:"blog_img,omitempty" bson:"blog_img,omitempty"`
-	Time         time.Time              `json:"time,omitempty" bson:",omitempty"`
+	Time         string                 `json:"time,omitempty" bson:",omitempty"`
 	Data         map[string]interface{} `json:"data,omitempty" bson:"data,omitempty"` // data is a optional fields that can hold anything in key:value format.
 }

@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"os"
 
@@ -63,7 +64,13 @@ func CreateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 		handler.ResponseWriter(res, http.StatusUnauthorized, "Unauthorized", nil) //res.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-	result, err := db.Collection("blogpage").InsertOne(nil, blogpage)
+	const (
+		layoutISO = "2006-01-02"
+		layoutUS  = "January 2, 2006"
+	)
+	//date := time.Now()
+	t := time.Now().Format(layoutUS)
+	result, err := db.Collection("blogpage").InsertOne(context.Background(), bson.M{"blogs": blogpage, "time": t})
 	if err != nil {
 		switch err.(type) {
 		case mongo.WriteException:
@@ -73,7 +80,11 @@ func CreateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 		}
 		return
 	}
+	// time.Parse
+	tt := time.Now()
+	//fmt.Println(t.Format("2006-01-02-15-04-05"))
 	blogpage.ID = result.InsertedID.(primitive.ObjectID)
+	blogpage.Time = tt.Format(layoutUS)
 	handler.ResponseWriter(res, http.StatusCreated, "", blogpage)
 }
 
@@ -104,9 +115,26 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 			Key: "$lookup",
 			Value: bson.M{
 				"from":         "people",
-				"localField":   "user_id",
+				"localField":   "blogs.user_id",
 				"foreignField": "_id",
 				"as":           "person_info",
+			},
+		},
+	}
+	projectStage := bson.D{
+		{
+			Key: "$project",
+			Value: bson.M{
+				"comment.post_id": 0,
+			},
+		},
+	}
+	unwindStage := bson.D{
+		{
+			Key: "$unwind",
+			Value: bson.M{
+				"path":                       "$comment",
+				"preserveNullAndEmptyArrays": true,
 			},
 		},
 	}
@@ -120,47 +148,51 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 	// 	},
 	// }
 
-	// lookupStagesPeople := bson.D{
-	// 	{
-	// 		Key: "$lookup",
-	// 		Value: bson.M{
-	// 			"from":         "people",
-	// 			"localField":   "comment.user_id",
-	// 			"foreignField": "_id",
-	// 			"as":           "comment.author_info",
-	// 		},
-	// 	},
-	// }
-
-	// unwindStageCommentAuthor := bson.D{
-	// 	{
-	// 		Key: "$unwind",
-	// 		Value: bson.M{
-	// 			"path": "$comment.author_info",
-	// 		},
-	// 	},
-	// }
-	groupStage := bson.D{
+	lookupStagesPeople := bson.D{
 		{
-			Key: "$group",
+			Key: "$lookup",
 			Value: bson.M{
-				"_id": "$_id",
-				"title": bson.M{
-					"$first": "$title",
-				},
-				"description": bson.M{
-					"$first": "$description",
-				},
-				"blog_img": bson.M{
-					"$first": "$blog_img",
-				},
-				"comment": bson.M{
-					"$first": "$comment",
-				},
+				"from":         "people",
+				"localField":   "comment.user_id",
+				"foreignField": "_id",
+				"as":           "comment.comment_author",
 			},
 		},
 	}
-	likeLookup := bson.D{
+	unwindStage2 := bson.D{
+		{
+			Key: "$unwind",
+			Value: bson.M{
+				"path":                       "$person_info",
+				"preserveNullAndEmptyArrays": true,
+			},
+		},
+	}
+	projectStage2 := bson.D{
+		{
+			Key: "$project",
+			Value: bson.M{
+				"comment.user_id":                 0,
+				"comment.post_id":                 0,
+				"comment.comment_author.password": 0,
+				"comment.comment_author.email":    0,
+				"person_info.password":            0,
+				"person_info.email":               0,
+				"blogs.user_id":                   0,
+			},
+		},
+	}
+
+	unwindStage3 := bson.D{
+		{
+			Key: "$unwind",
+			Value: bson.M{
+				"path":                       "$comment.comment_author",
+				"preserveNullAndEmptyArrays": true,
+			},
+		},
+	}
+	lookupStageLikes := bson.D{
 		{
 			Key: "$lookup",
 			Value: bson.M{
@@ -171,8 +203,56 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 			},
 		},
 	}
+	projectStage3 := bson.D{
+		{
+			Key: "$project",
+			Value: bson.M{
+				"blog_likes.post_id": 0,
+			},
+		},
+	}
+	groupStage := bson.D{
+		{
+			Key: "$group",
+			Value: bson.M{
+				"_id": "$_id",
+				"title": bson.M{
+					"$first": "$blogs.title",
+				},
+				"description": bson.M{
+					"$first": "$blogs.description",
+				},
+				"blog_img": bson.M{
+					"$first": "$blogs.blog_img",
+				},
+				"comment": bson.M{
+					"$push": "$comment",
+				},
+				"author_info": bson.M{
+					"$first": "$person_info",
+				},
+				"likes": bson.M{
+					"$first": "$blog_likes",
+				},
+				"created_at": bson.M{
+					"$first": "$time",
+				},
+			},
+		},
+	}
+	// likeLookup := bson.D{
+	// 	{
+	// 		Key: "$lookup",
+	// 		Value: bson.M{
+	// 			"from":         "like",
+	// 			"localField":   "_id",
+	// 			"foreignField": "post_id",
+	// 			"as":           "blog_likes",
+	// 		},
+	// 	},
+	// }
 
-	pipeline := mongo.Pipeline{lookupStage /*unwindStage,*/, lookupStage2 /* unwindStage,, lookupStagesPeople*/ /*unwindStageCommentAuthor*/, groupStage, likeLookup}
+	pipeline := mongo.Pipeline{lookupStage /*unwindStage,*/, lookupStage2 /* unwindStage,, lookupStagesPeople*/ /*unwindStageCommentAuthor*/, projectStage, unwindStage, lookupStagesPeople, unwindStage2, projectStage2, unwindStage3, lookupStageLikes, projectStage3, groupStage}
 
 	// // query for the aggregation
 	// showLoadedCursor, err := db.Collection("blogpage").Aggregate(context.TODO(), pipeline)
