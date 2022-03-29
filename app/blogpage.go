@@ -11,10 +11,8 @@ import (
 	"net/http"
 
 	"blog/app/handler"
-	"blog/app/helpers"
 	"blog/app/schema"
 
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -33,37 +31,37 @@ func CreateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 		return
 	}
 	// for checking authorization
-	cookie, err := req.Cookie("token")
-	if err != nil {
-		if err == http.ErrNoCookie {
-			handler.ResponseWriter(res, http.StatusUnauthorized, "Unauthorized", err.Error()) //res.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		handler.ResponseWriter(res, http.StatusUnauthorized, "Unauthorized", nil) //res.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	// tokenstr as the value of cookie
-	tokenStr := cookie.Value
+	// cookie, err := req.Cookie("token")
+	// if err != nil {
+	// 	if err == http.ErrNoCookie {
+	// 		handler.ResponseWriter(res, http.StatusUnauthorized, "Unauthorized", err.Error()) //res.WriteHeader(http.StatusUnauthorized)
+	// 		return
+	// 	}
+	// 	handler.ResponseWriter(res, http.StatusUnauthorized, "Unauthorized", nil) //res.WriteHeader(http.StatusBadRequest)
+	// 	return
+	// }
+	// // tokenstr as the value of cookie
+	// tokenStr := cookie.Value
 
-	claims := helpers.SignedDetails{}
+	// claims := helpers.SignedDetails{}
 
-	tkn, err := jwt.ParseWithClaims(tokenStr, &claims,
-		func(tkn *jwt.Token) (interface{}, error) {
-			return []byte(jwtKey), nil
-		})
+	// tkn, err := jwt.ParseWithClaims(tokenStr, &claims,
+	// 	func(tkn *jwt.Token) (interface{}, error) {
+	// 		return []byte(jwtKey), nil
+	// 	})
 
-	if err != nil {
-		if err == jwt.ErrSignatureInvalid {
-			handler.ResponseWriter(res, http.StatusUnauthorized, "Unauthorized", nil) //res.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		handler.ResponseWriter(res, http.StatusBadRequest, "Bad Request", err.Error()) //res.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	if !tkn.Valid {
-		handler.ResponseWriter(res, http.StatusUnauthorized, "Unauthorized", nil) //res.WriteHeader(http.StatusUnauthorized)
-		return
-	}
+	// if err != nil {
+	// 	if err == jwt.ErrSignatureInvalid {
+	// 		handler.ResponseWriter(res, http.StatusUnauthorized, "Unauthorized", nil) //res.WriteHeader(http.StatusUnauthorized)
+	// 		return
+	// 	}
+	// 	handler.ResponseWriter(res, http.StatusBadRequest, "Bad Request", err.Error()) //res.WriteHeader(http.StatusBadRequest)
+	// 	return
+	// }
+	// if !tkn.Valid {
+	// 	handler.ResponseWriter(res, http.StatusUnauthorized, "Unauthorized", nil) //res.WriteHeader(http.StatusUnauthorized)
+	// 	return
+	// }
 	const (
 		layoutISO = "2006-01-02"
 		layoutUS  = "January 2, 2006"
@@ -224,6 +222,9 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 				},
 				"blog_img": bson.M{
 					"$first": "$blogs.blog_img",
+				},
+				"tag": bson.M{
+					"$first": "$blogs.tag",
 				},
 				"comment": bson.M{
 					"$push": "$comment",

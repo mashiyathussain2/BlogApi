@@ -14,6 +14,7 @@ type Blog struct {
 	Description string                 `json:"description,omitempty" bson:"description,omitempty"`
 	User_ID     primitive.ObjectID     `json:"user_id,omitempty" bson:"user_id,omitempty" validate:"required"`
 	BlogImg     string                 `json:"blog_img,omitempty" bson:"blog_img,omitempty"`
+	Tag         string                 `json:"tag,omitempty" bson:"tag,omitempty"`
 	Time        string                 `json:"time,omitempty" bson:"time,omitempty"`
 	Data        map[string]interface{} `json:"data,omitempty" bson:"data,omitempty"` // data is a optional fields that can hold anything in key:value format.
 }
