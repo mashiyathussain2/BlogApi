@@ -279,6 +279,28 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 }
 
 // GetBlog will give us blog with special id
+// func GetBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
+// 	var params = mux.Vars(req)
+// 	id, err := primitive.ObjectIDFromHex(params["id"])
+// 	if err != nil {
+// 		handler.ResponseWriter(res, http.StatusBadRequest, "id that you sent is wrong!!!", nil)
+// 		return
+// 	}
+// 	var blog schema.Blog
+// 	err = db.Collection("blogpage").FindOne(context.Background(), schema.Blog{ID: id}).Decode(&blog)
+// 	if err != nil {
+// 		switch err {
+// 		case mongo.ErrNoDocuments:
+// 			handler.ResponseWriter(res, http.StatusNotFound, "blog not found", err.Error())
+// 		default:
+// 			log.Printf("Error while decode to go struct:%v\n", err)
+// 			handler.ResponseWriter(res, http.StatusInternalServerError, "there is an error on server!!!", nil)
+// 		}
+// 		return
+// 	}
+// 	handler.ResponseWriter(res, http.StatusOK, "", blog)
+// }
+
 func GetBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 	var params = mux.Vars(req)
 	id, err := primitive.ObjectIDFromHex(params["id"])
@@ -286,15 +308,16 @@ func GetBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 		handler.ResponseWriter(res, http.StatusBadRequest, "id that you sent is wrong!!!", nil)
 		return
 	}
-	var blog schema.Blog
-	err = db.Collection("blogpage").FindOne(nil, schema.Blog{ID: id}).Decode(&blog)
+	var blog bson.M
+
+	err = db.Collection("blogpage").FindOne(context.Background(), bson.M{"_id": id}).Decode(&blog)
 	if err != nil {
 		switch err {
 		case mongo.ErrNoDocuments:
-			handler.ResponseWriter(res, http.StatusNotFound, "blog not found", err.Error())
+			handler.ResponseWriter(res, http.StatusNotFound, "blogpage not found", nil)
 		default:
 			log.Printf("Error while decode to go struct:%v\n", err)
-			handler.ResponseWriter(res, http.StatusInternalServerError, "there is an error on server!!!", nil)
+			handler.ResponseWriter(res, http.StatusInternalServerError, "there is an error on server!!!", err.Error())
 		}
 		return
 	}
