@@ -226,6 +226,9 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 				"tag": bson.M{
 					"$first": "$blogs.tag",
 				},
+				"category": bson.M{
+					"$first": "$blogs.category",
+				},
 				"comment": bson.M{
 					"$push": "$comment",
 				},
