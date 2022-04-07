@@ -164,7 +164,7 @@ func UpdatePerson(db *mongo.Database, res http.ResponseWriter, req *http.Request
 	update := bson.M{
 		"$set": updateData,
 	}
-	result, err := db.Collection("people").UpdateOne(context.Background(), schema.Person{ID: oid}, update)
+	result, err := db.Collection("people").UpdateOne(context.Background(), model.Person{ID: oid}, update)
 	if err != nil {
 		log.Printf("Error while updateing document: %v", err)
 		handler.ResponseWriter(res, http.StatusInternalServerError, "error in updating document!!!", nil)
