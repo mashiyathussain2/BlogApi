@@ -25,7 +25,14 @@ func (app *App) setRouters() {
 	// route for login.
 	app.Post("/login", app.handleRequest(Login))
 
+	// route for the like
 	app.Post("/like", app.handleRequest(CreateLike))
 	app.Get("/likes", app.handleRequest(GetLikes))
 	app.Delete("/like/dlt/{id}", app.handleRequest(DeleteLike))
+
+	//route for the fololwers
+	app.Post("/follower", app.handleRequest(CreateFollow))
+	app.Get("/followers", app.handleRequest(GetFollowers))
+	app.Delete("/followers/dlt/{id}", app.handleRequest(DeleteFollow))
+	app.Get("/follower/{id}", app.handleRequest(GetFollower))
 }

@@ -6,8 +6,6 @@ import (
 	"log"
 	"net/http"
 
-	"strconv"
-
 	"blog/app/handler"
 	"blog/app/model"
 	"blog/app/schema"
@@ -20,7 +18,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/net/context"
 )
@@ -92,34 +89,87 @@ func CreatePerson(db *mongo.Database, res http.ResponseWriter, req *http.Request
 
 // GetPersons will handle people list get request
 func GetPersons(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
-	var personList []schema.Person
-	pageString := req.FormValue("page")
-	page, err := strconv.ParseInt(pageString, 10, 64)
-	if err != nil {
-		page = 0
-	}
-	page = page * limit
-	findOptions := options.FindOptions{
-		Skip:  &page,
-		Limit: &limit,
-		Sort: bson.M{
-			"_id": -1, // -1 for descending and 1 for ascending
+	//var personList []schema.Person
+	lookupStage := bson.D{
+		{
+			Key: "$lookup",
+			Value: bson.M{
+				"from":         "followers",
+				"localField":   "_id",
+				"foreignField": "user_id",
+				"as":           "following",
+			},
 		},
 	}
-	// query for find the user in the database
-	curser, err := db.Collection("people").Find(nil, bson.M{}, &findOptions)
-	if err != nil {
-		log.Printf("Error while quering collection: %v\n", err)
-		handler.ResponseWriter(res, http.StatusInternalServerError, "Error happend while reading data", nil)
-		return
+	projectStage := bson.D{
+		{
+			Key: "$project",
+			Value: bson.M{
+				"following.user_id": 0,
+				"following._id":     0,
+			},
+		},
 	}
-	err = curser.All(context.Background(), &personList)
-	if err != nil {
-		log.Fatalf("Error in curser: %v", err)
-		handler.ResponseWriter(res, http.StatusInternalServerError, "Error happend while reading data", nil)
-		return
+	lookupStage2 := bson.D{
+		{
+			Key: "$lookup",
+			Value: bson.M{
+				"from":         "followers",
+				"localField":   "_id",
+				"foreignField": "following_id",
+				"as":           "followers",
+			},
+		},
 	}
-	handler.ResponseWriter(res, http.StatusOK, "", personList)
+	projectStage2 := bson.D{
+		{
+			Key: "$project",
+			Value: bson.M{
+				"followers.following_id": 0,
+				"followers._id":          0,
+			},
+		},
+	}
+	pipeline := mongo.Pipeline{lookupStage, projectStage, lookupStage2, projectStage2}
+	//curser, err := db.Collection("people").Aggregate(context.TODO(), pipeline)
+	// pageString := req.FormValue("page")
+	// page, err := strconv.ParseInt(pageString, 10, 64)
+	// if err != nil {
+	// 	page = 0
+	// }
+	// page = page * limit
+	// findOptions := options.FindOptions{
+	// 	Skip:  &page,
+	// 	Limit: &limit,
+	// 	Sort: bson.M{
+	// 		"_id": -1, // -1 for descending and 1 for ascending
+	// 	},
+	// }
+	// // query for find the user in the database
+	// curser, err := db.Collection("people").Find(nil, bson.M{}, &findOptions)
+	// if err != nil {
+	// 	log.Printf("Error while quering collection: %v\n", err)
+	// 	handler.ResponseWriter(res, http.StatusInternalServerError, "Error happend while reading data", nil)
+	// 	return
+	// }
+	// err = curser.All(context.Background(), &personList)
+	// if err != nil {
+	// 	log.Fatalf("Error in curser: %v", err)
+	// 	handler.ResponseWriter(res, http.StatusInternalServerError, "Error happend while reading data", nil)
+	// 	return
+	// }
+	// handler.ResponseWriter(res, http.StatusOK, "", personList)
+	showLoadedCursor, err := db.Collection("people").Aggregate(context.TODO(), pipeline)
+	if err != nil {
+		fmt.Println("Hello", err)
+
+	}
+	var showsLoaded = []bson.M{}
+	if err = showLoadedCursor.All(context.TODO(), &showsLoaded); err != nil {
+		fmt.Println("Hellooo")
+
+	}
+	handler.ResponseWriter(res, http.StatusOK, "", showsLoaded)
 }
 
 // GetPerson will give us person with special id
