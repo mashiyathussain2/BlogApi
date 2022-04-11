@@ -30,45 +30,8 @@ func CreateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 		handler.ResponseWriter(res, http.StatusBadRequest, "body json request have issues!!!", nil)
 		return
 	}
-	// for checking authorization
-	// cookie, err := req.Cookie("token")
-	// if err != nil {
-	// 	if err == http.ErrNoCookie {
-	// 		handler.ResponseWriter(res, http.StatusUnauthorized, "Unauthorized", err.Error()) //res.WriteHeader(http.StatusUnauthorized)
-	// 		return
-	// 	}
-	// 	handler.ResponseWriter(res, http.StatusUnauthorized, "Unauthorized", nil) //res.WriteHeader(http.StatusBadRequest)
-	// 	return
-	// }
-	// // tokenstr as the value of cookie
-	// tokenStr := cookie.Value
-
-	// claims := helpers.SignedDetails{}
-
-	// tkn, err := jwt.ParseWithClaims(tokenStr, &claims,
-	// 	func(tkn *jwt.Token) (interface{}, error) {
-	// 		return []byte(jwtKey), nil
-	// 	})
-
-	// if err != nil {
-	// 	if err == jwt.ErrSignatureInvalid {
-	// 		handler.ResponseWriter(res, http.StatusUnauthorized, "Unauthorized", nil) //res.WriteHeader(http.StatusUnauthorized)
-	// 		return
-	// 	}
-	// 	handler.ResponseWriter(res, http.StatusBadRequest, "Bad Request", err.Error()) //res.WriteHeader(http.StatusBadRequest)
-	// 	return
-	// }
-	// if !tkn.Valid {
-	// 	handler.ResponseWriter(res, http.StatusUnauthorized, "Unauthorized", nil) //res.WriteHeader(http.StatusUnauthorized)
-	// 	return
-	// }
-	const (
-		layoutISO = "2006-01-02"
-		layoutUS  = "January 2, 2006"
-	)
-	//date := time.Now()
-	t := time.Now().Format(layoutUS)
-	result, err := db.Collection("blogpage").InsertOne(context.Background(), bson.M{"blogs": blogpage, "time": t})
+	blogpage.Time = time.Now().UTC()
+	result, err := db.Collection("blogpage").InsertOne(context.Background(), blogpage)
 	if err != nil {
 		switch err.(type) {
 		case mongo.WriteException:
@@ -78,11 +41,7 @@ func CreateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 		}
 		return
 	}
-	// time.Parse
-	tt := time.Now()
-	//fmt.Println(t.Format("2006-01-02-15-04-05"))
 	blogpage.ID = result.InsertedID.(primitive.ObjectID)
-	blogpage.Time = tt.Format(layoutUS)
 	handler.ResponseWriter(res, http.StatusCreated, "", blogpage)
 }
 
@@ -100,20 +59,13 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 			},
 		},
 	}
-	// unwindStage := bson.D{
-	// 	{
-	// 		Key: "$unwind",
-	// 		Value: bson.M{
-	// 			"path": "$comment",
-	// 		},
-	// 	},
-	// }
+
 	lookupStage2 := bson.D{
 		{
 			Key: "$lookup",
 			Value: bson.M{
 				"from":         "people",
-				"localField":   "blogs.user_id",
+				"localField":   "user_id",
 				"foreignField": "_id",
 				"as":           "person_info",
 			},
@@ -136,15 +88,6 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 			},
 		},
 	}
-
-	// unwindStage := bson.D{
-	// 	{
-	// 		Key: "$unwind",
-	// 		Value: bson.M{
-	// 			"path": "$comment",
-	// 		},
-	// 	},
-	// }
 
 	lookupStagesPeople := bson.D{
 		{
@@ -176,7 +119,7 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 				"comment.comment_author.email":    0,
 				"person_info.password":            0,
 				"person_info.email":               0,
-				"blogs.user_id":                   0,
+				"user_id":                         0,
 			},
 		},
 	}
@@ -205,7 +148,7 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 		{
 			Key: "$project",
 			Value: bson.M{
-				"blog_likes.post_id": 0,
+				"post_id": 0,
 			},
 		},
 	}
@@ -215,19 +158,19 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 			Value: bson.M{
 				"_id": "$_id",
 				"title": bson.M{
-					"$first": "$blogs.title",
+					"$first": "$title",
 				},
 				"description": bson.M{
-					"$first": "$blogs.description",
+					"$first": "$description",
 				},
 				"blog_img": bson.M{
-					"$first": "$blogs.blog_img",
+					"$first": "$blog_img",
 				},
 				"tag": bson.M{
-					"$first": "$blogs.tag",
+					"$first": "$tag",
 				},
 				"category": bson.M{
-					"$first": "$blogs.category",
+					"$first": "$category",
 				},
 				"comment": bson.M{
 					"$push": "$comment",
@@ -244,64 +187,141 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 			},
 		},
 	}
-	// likeLookup := bson.D{
+	addfieldStage := bson.D{
+		{
+			Key: "$addFields",
+			Value: bson.M{
+				"time": bson.M{
+					"$substr": bson.A{"$created_at", 0, 10},
+				},
+			},
+		},
+	}
+	projectStage4 := bson.D{
+		{
+			Key: "$project",
+			Value: bson.M{
+				"created_at": 0,
+			},
+		},
+	}
+	// addfieldStage2 := bson.D{
 	// 	{
-	// 		Key: "$lookup",
+	// 		Key: "$addFields",
 	// 		Value: bson.M{
-	// 			"from":         "like",
-	// 			"localField":   "_id",
-	// 			"foreignField": "post_id",
-	// 			"as":           "blog_likes",
+	// 			"month" : bson.M{
+	// 				"$month": "$created_at",
+	// 			},
+	// 			"day" : bson.M{
+	// 				"$dayOfMonth": "$created_at",
+	// 			},
+	// 			"year" : bson.M{
+	// 				"$year": "$created_at",
+	// 			},
+	// 		},
+	// 	},
+	// }
+	// addfieldStage3 := bson.D{
+	// 	{
+	// 		Key: "$addFields",
+	// 		Value: bson.M{
+	// 			"days" : bson.M{
+	// 				"$toString": "$day",
+	// 			},
+	// 			"years" : bson.M{
+	// 				"$toString": "$year",
+	// 			},
+	// 		},
+	// 	},
+	// }
+	// projectStage5 := bson.D{
+	// 	{
+	// 		Key: "$project",
+	// 		Value: bson.M{
+	// 			"day": 0,
+	// 			"year": 0,
+	// 		},
+	// 	},
+	// }
+	// addfieldStage4 := bson.D{
+	// 	{
+	// 		Key: "$addFields",
+	// 		Value: bson.M{
+	// 			"Month" : bson.M{
+	// 				"$arrayElemAt" : [
+	// 					[
+	// 					  "",
+	// 					  "Jan",
+	// 					  "Feb",
+	// 					  "Mar",
+	// 					  "April",
+	// 					  "May",
+	// 					  "Jun",
+	// 					  "Jul",
+	// 					  "Aug",
+	// 					  "Sep",
+	// 					  "Oct",
+	// 					  "Nov",
+	// 					  "Dec",
+	// 					],
+	// 					"$month",
+	// 				],
+
+	// 			},
 	// 		},
 	// 	},
 	// }
 
-	pipeline := mongo.Pipeline{lookupStage /*unwindStage,*/, lookupStage2 /* unwindStage,, lookupStagesPeople*/ /*unwindStageCommentAuthor*/, projectStage, unwindStage, lookupStagesPeople, unwindStage2, projectStage2, unwindStage3, lookupStageLikes, projectStage3, groupStage}
+	pipeline := mongo.Pipeline{lookupStage, lookupStage2, projectStage, unwindStage, lookupStagesPeople, unwindStage2, projectStage2, unwindStage3, lookupStageLikes, projectStage3, groupStage, addfieldStage, projectStage4}
+
+	// pageString := req.FormValue("page")
+	// page, err := strconv.ParseInt(pageString, 10, 64)
+	// if err != nil {
+	// 	page = 0
+	// }
+	// page = page * limit
+	// findOptions := options.FindOptions{
+	// 	Skip:  &page,
+	// 	Limit: &limit,
+	// 	Sort: bson.M{
+	// 		"_id": -1, // -1 for descending and 1 for ascending
+	// 	},
+	// }
 
 	// // query for the aggregation
-	// showLoadedCursor, err := db.Collection("blogpage").Aggregate(context.TODO(), pipeline)
 	showLoadedCursor, err := db.Collection("blogpage").Aggregate(context.TODO(), pipeline)
 	if err != nil {
 		fmt.Println("Hello", err)
 
 	}
 	var showsLoaded = []bson.M{}
-	//showsLoaded := new(schema.Blog)
 
 	if err = showLoadedCursor.All(context.TODO(), &showsLoaded); err != nil {
 		fmt.Println("Hellooo")
 
 	}
-	// count, err := db.Collection("blogpage").CountDocuments(context.TODO(), bson.M{})
-	// fmt.Println(count, err)
-	//now := time.Now()
-	//fmt.Println(showsLoaded)
 
 	handler.ResponseWriter(res, http.StatusOK, "hello", showsLoaded)
 
 }
 
-// GetBlog will give us blog with special id
-// func GetBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
-// 	var params = mux.Vars(req)
-// 	id, err := primitive.ObjectIDFromHex(params["id"])
+// func SearchBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
+// 	var blogList []schema.Blog
+
+// 	// query for find the user in the database
+// 	curser, err := db.Collection("blogpage").Find(nil, bson.M{})
 // 	if err != nil {
-// 		handler.ResponseWriter(res, http.StatusBadRequest, "id that you sent is wrong!!!", nil)
+// 		log.Printf("Error while quering collection: %v\n", err)
+// 		handler.ResponseWriter(res, http.StatusInternalServerError, "Error happend while reading data", nil)
 // 		return
 // 	}
-// 	var blog schema.Blog
-// 	err = db.Collection("blogpage").FindOne(context.Background(), schema.Blog{ID: id}).Decode(&blog)
+// 	err = curser.All(context.Background(), &blogList)
 // 	if err != nil {
-// 		switch err {
-// 		case mongo.ErrNoDocuments:
-// 			handler.ResponseWriter(res, http.StatusNotFound, "blog not found", err.Error())
-// 		default:
-// 			log.Printf("Error while decode to go struct:%v\n", err)
-// 			handler.ResponseWriter(res, http.StatusInternalServerError, "there is an error on server!!!", nil)
-// 		}
+// 		log.Fatalf("Error in curser: %v", err)
+// 		handler.ResponseWriter(res, http.StatusInternalServerError, "Error happend while reading data", nil)
 // 		return
 // 	}
-// 	handler.ResponseWriter(res, http.StatusOK, "", blog)
+// 	handler.ResponseWriter(res, http.StatusOK, "", blogList)
 // }
 
 func GetBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) {

@@ -56,7 +56,7 @@ func GetLikes(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 		},
 	}
 	// query for find the user in the database
-	curser, err := db.Collection("like").Find(nil, bson.M{}, &findOptions)
+	curser, err := db.Collection("like").Find(context.TODO(), bson.M{}, &findOptions)
 	if err != nil {
 		log.Printf("Error while quering collection: %v\n", err)
 		handler.ResponseWriter(res, http.StatusInternalServerError, "Error happend while reading data", nil)

@@ -27,7 +27,7 @@ func CreateComment(db *mongo.Database, res http.ResponseWriter, req *http.Reques
 		return
 	}
 	// query for insert one comment in the database.
-	result, err := db.Collection("comment").InsertOne(nil, comment)
+	result, err := db.Collection("comment").InsertOne(context.Background(), comment)
 	if err != nil {
 		switch err.(type) {
 		case mongo.WriteException:
@@ -58,7 +58,7 @@ func GetComments(db *mongo.Database, res http.ResponseWriter, req *http.Request)
 		},
 	}
 	// query for find the comment.
-	curser, err := db.Collection("comment").Find(nil, bson.M{}, &findOptions)
+	curser, err := db.Collection("comment").Find(context.TODO(), bson.M{}, &findOptions)
 	if err != nil {
 		log.Printf("Error while quering collection: %v\n", err)
 		handler.ResponseWriter(res, http.StatusInternalServerError, "Error happend while reading data", nil)
@@ -84,7 +84,7 @@ func GetComment(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 	}
 	var comment schema.Comment
 	// query for find one comment in the database.
-	err = db.Collection("comment").FindOne(nil, schema.Comment{ID: id}).Decode(&comment)
+	err = db.Collection("comment").FindOne(context.TODO(), schema.Comment{ID: id}).Decode(&comment)
 	if err != nil {
 		switch err {
 		case mongo.ErrNoDocuments:
