@@ -9,7 +9,7 @@ import (
 )
 
 // Blog is the data structure that we will save and receive.
-//now := time.Now()
+
 type Blog struct {
 	ID          primitive.ObjectID     `json:"_id,omitempty" bson:"_id,omitempty"`
 	Title       string                 `json:"title,omitempty" bson:"title,omitempty"`

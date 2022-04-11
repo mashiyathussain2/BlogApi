@@ -41,6 +41,26 @@ func CreateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 		}
 		return
 	}
+	// const (
+	// 	layoutUS = "January 2, 2006"
+	// 	str      = "January 2, 2006"
+	// )
+	// //layout := "January 2, 2006"
+	// Time := time.Date(2022, 03, 28, 03, 50, 16, 0, time.UTC)
+	// t := Time.String()
+	// blogpage.Time = Time.String()
+	// // blogpage.Time, err = time.Parse(layoutUS, str)
+	// // if err != nil {
+	// // 	fmt.Println(err)
+	// // }
+	// //t := time.Now()
+	// fmt.Println(blogpage.Time)
+	//blogpage.Time = t.String()
+
+	//t := time.Now().Format(layoutUS)
+	//blogpage.Time, err =  time.Parse(layout, str)
+	// blogpage.Time = err.Error()
+
 	blogpage.ID = result.InsertedID.(primitive.ObjectID)
 	handler.ResponseWriter(res, http.StatusCreated, "", blogpage)
 }
@@ -205,88 +225,16 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 			},
 		},
 	}
-	// addfieldStage2 := bson.D{
-	// 	{
-	// 		Key: "$addFields",
-	// 		Value: bson.M{
-	// 			"month" : bson.M{
-	// 				"$month": "$created_at",
-	// 			},
-	// 			"day" : bson.M{
-	// 				"$dayOfMonth": "$created_at",
-	// 			},
-	// 			"year" : bson.M{
-	// 				"$year": "$created_at",
-	// 			},
-	// 		},
-	// 	},
-	// }
-	// addfieldStage3 := bson.D{
-	// 	{
-	// 		Key: "$addFields",
-	// 		Value: bson.M{
-	// 			"days" : bson.M{
-	// 				"$toString": "$day",
-	// 			},
-	// 			"years" : bson.M{
-	// 				"$toString": "$year",
-	// 			},
-	// 		},
-	// 	},
-	// }
-	// projectStage5 := bson.D{
-	// 	{
-	// 		Key: "$project",
-	// 		Value: bson.M{
-	// 			"day": 0,
-	// 			"year": 0,
-	// 		},
-	// 	},
-	// }
-	// addfieldStage4 := bson.D{
-	// 	{
-	// 		Key: "$addFields",
-	// 		Value: bson.M{
-	// 			"Month" : bson.M{
-	// 				"$arrayElemAt" : [
-	// 					[
-	// 					  "",
-	// 					  "Jan",
-	// 					  "Feb",
-	// 					  "Mar",
-	// 					  "April",
-	// 					  "May",
-	// 					  "Jun",
-	// 					  "Jul",
-	// 					  "Aug",
-	// 					  "Sep",
-	// 					  "Oct",
-	// 					  "Nov",
-	// 					  "Dec",
-	// 					],
-	// 					"$month",
-	// 				],
+	sortStage := bson.D{
+		{
+			Key: "$sort",
+			Value: bson.M{
+				"created_at": -1,
+			},
+		},
+	}
 
-	// 			},
-	// 		},
-	// 	},
-	// }
-
-	pipeline := mongo.Pipeline{lookupStage, lookupStage2, projectStage, unwindStage, lookupStagesPeople, unwindStage2, projectStage2, unwindStage3, lookupStageLikes, projectStage3, groupStage, addfieldStage, projectStage4}
-
-	// pageString := req.FormValue("page")
-	// page, err := strconv.ParseInt(pageString, 10, 64)
-	// if err != nil {
-	// 	page = 0
-	// }
-	// page = page * limit
-	// findOptions := options.FindOptions{
-	// 	Skip:  &page,
-	// 	Limit: &limit,
-	// 	Sort: bson.M{
-	// 		"_id": -1, // -1 for descending and 1 for ascending
-	// 	},
-	// }
+	pipeline := mongo.Pipeline{lookupStage, lookupStage2, projectStage, unwindStage, lookupStagesPeople, unwindStage2, projectStage2, unwindStage3, lookupStageLikes, projectStage3, groupStage, addfieldStage, projectStage4, sortStage}
 
 	// // query for the aggregation
 	showLoadedCursor, err := db.Collection("blogpage").Aggregate(context.TODO(), pipeline)
@@ -294,12 +242,32 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 		fmt.Println("Hello", err)
 
 	}
+
 	var showsLoaded = []bson.M{}
 
 	if err = showLoadedCursor.All(context.TODO(), &showsLoaded); err != nil {
 		fmt.Println("Hellooo")
 
 	}
+	// const (
+	// 	layoutUS = "January 2, 2006"
+	// 	str      = "January 2, 2006"
+	// )
+
+	// for _, s := range showsLoaded {
+
+	// 	tt := s["time"].(string)
+	// 	fmt.Println(tt)
+
+	// }
+	// m := bson.M{
+	// 	"time": time.Now().Format(layoutUS),
+	// }
+	// showsLoaded = append(showsLoaded, m)
+	//showsLoaded = bson.M{"time": time.Now().Format(layoutUS)}.(string)
+	// fmt.Println(tt)
+
+	//showsLoaded.Time = time.Now().Format(layoutUS)
 
 	handler.ResponseWriter(res, http.StatusOK, "hello", showsLoaded)
 

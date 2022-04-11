@@ -25,7 +25,7 @@ func CreateLike(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 		return
 	}
 	// query for insert one like in the database.
-	result, err := db.Collection("like").InsertOne(nil, like)
+	result, err := db.Collection("like").InsertOne(context.TODO(), like)
 	if err != nil {
 		switch err.(type) {
 		case mongo.WriteException:

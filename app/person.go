@@ -180,6 +180,7 @@ func GetPerson(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 		handler.ResponseWriter(res, http.StatusBadRequest, "id that you sent is wrong!!!", nil)
 		return
 	}
+
 	var person schema.Person
 	// query for finding one user in the database.
 	err = db.Collection("people").FindOne(context.Background(), model.Person{ID: id}).Decode(&person)
@@ -194,6 +195,7 @@ func GetPerson(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	handler.ResponseWriter(res, http.StatusOK, "", person)
+
 }
 
 // UpdatePerson will handle the person update endpoint
