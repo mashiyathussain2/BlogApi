@@ -60,7 +60,6 @@ func CreateBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) 
 	//t := time.Now().Format(layoutUS)
 	//blogpage.Time, err =  time.Parse(layout, str)
 	// blogpage.Time = err.Error()
-
 	blogpage.ID = result.InsertedID.(primitive.ObjectID)
 	handler.ResponseWriter(res, http.StatusCreated, "", blogpage)
 }
@@ -229,7 +228,7 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 		{
 			Key: "$sort",
 			Value: bson.M{
-				"created_at": -1,
+				"time": -1,
 			},
 		},
 	}
@@ -249,48 +248,29 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 		fmt.Println("Hellooo")
 
 	}
-	// const (
-	// 	layoutUS = "January 2, 2006"
-	// 	str      = "January 2, 2006"
-	// )
 
-	// for _, s := range showsLoaded {
+	const (
+		layoutUS = "January 2, 2006"
+		str      = "January 2, 2006"
+	)
+	t := time.Now().Format(layoutUS)
+	fmt.Println(t)
 
-	// 	tt := s["time"].(string)
-	// 	fmt.Println(tt)
+	for _, s := range showsLoaded {
 
-	// }
-	// m := bson.M{
-	// 	"time": time.Now().Format(layoutUS),
-	// }
-	// showsLoaded = append(showsLoaded, m)
-	//showsLoaded = bson.M{"time": time.Now().Format(layoutUS)}.(string)
+		tt := s["time"].(string)
+		fmt.Println(tt)
+
+	}
+	// s := showsLoaded
+	// tt := s[{"time" : time.Now()}]
 	// fmt.Println(tt)
 
-	//showsLoaded.Time = time.Now().Format(layoutUS)
+	//showsLoaded = bson.M{"time": time.Now().Format(layoutUS)}.(string)
 
 	handler.ResponseWriter(res, http.StatusOK, "hello", showsLoaded)
 
 }
-
-// func SearchBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
-// 	var blogList []schema.Blog
-
-// 	// query for find the user in the database
-// 	curser, err := db.Collection("blogpage").Find(nil, bson.M{})
-// 	if err != nil {
-// 		log.Printf("Error while quering collection: %v\n", err)
-// 		handler.ResponseWriter(res, http.StatusInternalServerError, "Error happend while reading data", nil)
-// 		return
-// 	}
-// 	err = curser.All(context.Background(), &blogList)
-// 	if err != nil {
-// 		log.Fatalf("Error in curser: %v", err)
-// 		handler.ResponseWriter(res, http.StatusInternalServerError, "Error happend while reading data", nil)
-// 		return
-// 	}
-// 	handler.ResponseWriter(res, http.StatusOK, "", blogList)
-// }
 
 func GetBlog(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 	var params = mux.Vars(req)
