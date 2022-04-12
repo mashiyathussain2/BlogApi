@@ -200,30 +200,30 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 				"likes": bson.M{
 					"$first": "$blog_likes",
 				},
-				"created_at": bson.M{
+				"time": bson.M{
 					"$first": "$time",
 				},
 			},
 		},
 	}
-	addfieldStage := bson.D{
-		{
-			Key: "$addFields",
-			Value: bson.M{
-				"time": bson.M{
-					"$substr": bson.A{"$created_at", 0, 10},
-				},
-			},
-		},
-	}
-	projectStage4 := bson.D{
-		{
-			Key: "$project",
-			Value: bson.M{
-				"created_at": 0,
-			},
-		},
-	}
+	// addfieldStage := bson.D{
+	// 	{
+	// 		Key: "$addFields",
+	// 		Value: bson.M{
+	// 			"time": bson.M{
+	// 				"$substr": bson.A{"$created_at", 0, 10},
+	// 			},
+	// 		},
+	// 	},
+	// }
+	// projectStage4 := bson.D{
+	// 	{
+	// 		Key: "$project",
+	// 		Value: bson.M{
+	// 			"created_at": 0,
+	// 		},
+	// 	},
+	// }
 	sortStage := bson.D{
 		{
 			Key: "$sort",
@@ -233,7 +233,7 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 		},
 	}
 
-	pipeline := mongo.Pipeline{lookupStage, lookupStage2, projectStage, unwindStage, lookupStagesPeople, unwindStage2, projectStage2, unwindStage3, lookupStageLikes, projectStage3, groupStage, addfieldStage, projectStage4, sortStage}
+	pipeline := mongo.Pipeline{lookupStage, lookupStage2, projectStage, unwindStage, lookupStagesPeople, unwindStage2, projectStage2, unwindStage3, lookupStageLikes, projectStage3, groupStage, sortStage /*addfieldStage, projectStage4, sortStage*/}
 
 	// // query for the aggregation
 	showLoadedCursor, err := db.Collection("blogpage").Aggregate(context.TODO(), pipeline)
@@ -251,22 +251,23 @@ func GetBlogs(db *mongo.Database, res http.ResponseWriter, req *http.Request) {
 
 	const (
 		layoutUS = "January 2, 2006"
-		str      = "January 2, 2006"
+		str      = "2006,January 2"
 	)
-	t := time.Now().Format(layoutUS)
-	fmt.Println(t)
 
 	for _, s := range showsLoaded {
 
-		tt := s["time"].(string)
-		fmt.Println(tt)
+		ttt := s["time"].(primitive.DateTime).Time()
+		//fmt.Println(tt)
+		// fmt.Println(tt)
+		// ttt, err := time.Parse("2006-04-01", tt)
+		// if err != nil {
+		// 	fmt.Println(err)
+		// }
+
+		s["time"] = ttt.Format(layoutUS)
+		//fmt.Println(ttt)
 
 	}
-	// s := showsLoaded
-	// tt := s[{"time" : time.Now()}]
-	// fmt.Println(tt)
-
-	//showsLoaded = bson.M{"time": time.Now().Format(layoutUS)}.(string)
 
 	handler.ResponseWriter(res, http.StatusOK, "hello", showsLoaded)
 
